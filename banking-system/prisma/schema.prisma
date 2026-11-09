@@ -1,0 +1,68 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  firstName String
+  lastName  String
+  role      Role      @default(CUSTOMER)
+  accounts  Account[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Account {
+  id            String        @id @default(uuid())
+  accountNumber String        @unique
+  type          AccountType   @default(CHECKING)
+  balance       Decimal       @default(0) @db.Decimal(19, 4)
+  currency      String        @default("USD")
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  outgoing      Transaction[] @relation("FromAccount")
+  incoming      Transaction[] @relation("ToAccount")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model Transaction {
+  id            String          @id @default(uuid())
+  type          TransactionType
+  amount        Decimal         @db.Decimal(19, 4)
+  description   String?
+  fromAccountId String?
+  toAccountId   String?
+  fromAccount   Account?        @relation("FromAccount", fields: [fromAccountId], references: [id])
+  toAccount     Account?        @relation("ToAccount", fields: [toAccountId], references: [id])
+  createdAt     DateTime        @default(now())
+
+  @@index([fromAccountId])
+  @@index([toAccountId])
+}
